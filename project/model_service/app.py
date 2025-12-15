@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, send_file
+from flask_cors import CORS
 from pymongo import MongoClient, ASCENDING, DESCENDING
 from bson import ObjectId
 from bson.errors import InvalidId
@@ -62,6 +63,21 @@ class Config:
 
 app.config.from_object(Config)
 
+# Enable Flask-CORS globally for API routes. This simplifies and hardens CORS handling
+# compared to the custom before_request/after_request logic below.
+allowed_origins = [
+    os.getenv("FRONTEND_ORIGIN", "https://ai-based-bloodsmear-frontend.onrender.com"),
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+# Allow any *.onrender.com origin as well, to support Render previews/renames.
+CORS(
+    app,
+    resources={r"/api/*": {"origins": allowed_origins + ["*.onrender.com"]}},
+    supports_credentials=True,
+)
+
 class DummyCollection:
     def find_one(self, *args, **kwargs):
         return None
@@ -96,63 +112,6 @@ users_collection = DummyCollection()
 analyses_collection = DummyCollection()
 fs = type('obj', (object,), {'put': lambda *a: 'dummy_id', 'get': lambda *a: io.BytesIO(b'dummy')})
 
-# CORS Configuration
-@app.before_request
-def handle_preflight():
-    """Handle preflight OPTIONS requests"""
-    if request.method == 'OPTIONS':
-        origin = request.headers.get('Origin', '')
-        # Allow any localhost origin for development, plus configured frontend origin in production.
-        # Also allow any Render-hosted frontend (*.onrender.com) to simplify deployment.
-        allowed_origin = app.config.get('FRONTEND_ORIGIN')
-        if (
-            origin
-            and (
-                origin.startswith('http://localhost:')
-                or origin.startswith('http://127.0.0.1:')
-                or (allowed_origin and origin == allowed_origin)
-                or origin.endswith('.onrender.com')
-            )
-        ):
-            response = jsonify({})
-            # Use dictionary assignment to set (not add) headers
-            response.headers['Access-Control-Allow-Origin'] = origin
-            response.headers['Access-Control-Allow-Credentials'] = 'true'
-            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
-            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, PATCH'
-            response.headers['Access-Control-Max-Age'] = '3600'
-            return response
-
-@app.after_request
-def after_request(response):
-    """Add CORS headers to all responses"""
-    # Skip if this was an OPTIONS request already handled by before_request
-    if request.method == 'OPTIONS':
-        return response
-    
-    origin = request.headers.get('Origin', '')
-    
-    # Allow any localhost origin for development (flexible for Vite's dynamic ports)
-    # and the configured production frontend origin.
-    # Also allow any Render frontend (*.onrender.com) to simplify deployment.
-    allowed_origin = app.config.get('FRONTEND_ORIGIN')
-    if (
-        origin
-        and (
-            origin.startswith('http://localhost:')
-            or origin.startswith('http://127.0.0.1:')
-            or (allowed_origin and origin == allowed_origin)
-            or origin.endswith('.onrender.com')
-        )
-    ):
-        # Use dictionary assignment to set (not add) headers, preventing duplicates
-        response.headers['Access-Control-Allow-Origin'] = origin
-        response.headers['Access-Control-Allow-Credentials'] = 'true'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
-        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, PATCH'
-        response.headers['Access-Control-Max-Age'] = '3600'
-    
-    return response
 def setup_database():
     try:
         client = MongoClient(app.config['MONGODB_URI'])
