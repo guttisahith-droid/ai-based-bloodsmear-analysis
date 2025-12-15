@@ -196,31 +196,21 @@ class BloodSmearClassifier:
         self.transform = self.get_transform()
         
     def load_model(self, model_path):
-        """Load the trained model - Fixed for 11 classes"""
+        """Load the trained model - Fixed for 11 classes.
+
+        NOTE:
+        - This function now ONLY loads a local file at `model_path`.
+        - Remote downloads (e.g. from Google Drive) are intentionally disabled because
+          they often return HTML pages instead of raw .pth data, which breaks torch.load.
+        - To use a trained model, place a valid PyTorch checkpoint at `model_path`
+          (default: best_model.pth in project/model_service) and redeploy.
+        """
         print(f"📁 Loading model from: {model_path}")
 
         if not os.path.exists(model_path):
-            if app.config.get('MODEL_URL'):
-                try:
-                    # Convert Google Drive share links to direct download links if needed
-                    model_url = app.config['MODEL_URL']
-                    if "drive.google.com/file/d/" in model_url and "/view" in model_url:
-                        try:
-                            file_id = model_url.split('/d/')[1].split('/')[0]
-                            model_url = f"https://drive.google.com/uc?export=download&id={file_id}"
-                            print(f"🔗 Converted Google Drive link to direct download: {model_url}")
-                        except Exception as e:
-                            print(f"⚠️ Could not parse Google Drive link: {e}")
-
-                    print(f"🌐 Downloading model from {model_url} ...")
-                    urllib.request.urlretrieve(model_url, model_path)
-                    print("✅ Downloaded model file")
-                except Exception as e:
-                    print(f"❌ Failed to download model: {e}")
-            if not os.path.exists(model_path):
-                print(f"❌ Model file not found: {model_path}")
-                print("🔄 Creating a new model with random weights...")
-                return self.create_new_model()
+            print(f"❌ Model file not found on disk: {model_path}")
+            print("🔄 Creating a new model with random weights (no trained checkpoint present)...")
+            return self.create_new_model()
         
         try:
             # Load checkpoint
