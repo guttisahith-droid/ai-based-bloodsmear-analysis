@@ -1,22 +1,23 @@
 services:
+  # Flask backend (model_service) deployed as a Python web service
   - type: web
-    name: bloodsmear-backend
-    env: node
-    rootDirectory: project/server
-    buildCommand: npm install
-    startCommand: npm start
+    name: bloodsmear-flask-backend
+    env: python
+    rootDirectory: project/model_service
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
     envVars:
       - key: MONGODB_URI
         sync: false
-      - key: MONGODB_DB_NAME
-        value: bloodsmear
       - key: JWT_SECRET
         sync: false
-      - key: NODE_ENV
-        value: production
+      - key: MODEL_PATH
+        value: best_model.pth
       - key: FRONTEND_ORIGIN
+        # Replace this with the actual frontend URL after the first deploy if it changes
         value: https://ai-based-bloodsmear-frontend.onrender.com
 
+  # React frontend built with Vite and served as a static site
   - type: static
     name: bloodsmear-frontend
     rootDirectory: project
@@ -24,5 +25,7 @@ services:
     staticPublishPath: dist
     envVars:
       - key: VITE_API_BASE_URL
-        value: https://bloodsmear-backend.onrender.com
+        # This will be the public URL of the Flask backend service created above
+        # After Render creates the backend, update this value to its actual URL if different
+        value: https://bloodsmear-flask-backend.onrender.com
 

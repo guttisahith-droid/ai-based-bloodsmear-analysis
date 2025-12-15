@@ -21,10 +21,36 @@ import urllib.request
 
 app = Flask(__name__)
 
+
+def _normalize_mongo_uri(raw_uri: str | None) -> str | None:
+    """
+    Normalize MongoDB URI values.
+
+    Some environments mistakenly set MONGODB_URI like:
+        MONGODB_URI=MONGODB_URI=mongodb+srv://...
+    This helper strips the leading `MONGODB_URI=` if present so that
+    pymongo receives a valid URI starting with mongodb:// or mongodb+srv://
+    """
+    if not raw_uri:
+        return raw_uri
+    if raw_uri.startswith('MONGODB_URI='):
+        # Strip the accidental prefix and log a warning once
+        cleaned = raw_uri.split('=', 1)[1].strip()
+        print("⚠️  Detected malformed MONGODB_URI starting with 'MONGODB_URI='; "
+              "automatically corrected to:", cleaned)
+        return cleaned
+    return raw_uri
+
+
 # Configuration
 class Config:
     # Use local MongoDB by default, can be overridden with MONGODB_URI environment variable
-    MONGODB_URI = os.getenv('MONGODB_URI', 'MONGODB_URI=mongodb+srv://guttisahith_db_user:Bhanu@143@cluster0.afzyuif.mongodb.net/bloodsmear?retryWrites=true&w=majority')
+    # NOTE: The default here is only for local/dev. In Render or production you MUST set MONGODB_URI as an env var.
+    # Example (do NOT hard-code credentials here):
+    #   MONGODB_URI=mongodb+srv://bloodsmear:ENCODED_PASSWORD@cluster0.afzyuif.mongodb.net/bloodsmear?retryWrites=true&w=majority
+    MONGODB_URI = _normalize_mongo_uri(
+        os.getenv('MONGODB_URI', 'mongodb://localhost:27017/bloodsmear')
+    )
     PORT = int(os.getenv('PORT', 5001))
     SECRET_KEY = os.getenv('JWT_SECRET', 'your_super_secret_jwt_key_change_this')
     UPLOAD_FOLDER = 'uploads'
@@ -32,6 +58,7 @@ class Config:
     MODEL_PATH = os.getenv('MODEL_PATH', 'best_model.pth')
     MODEL_URL = os.getenv('MODEL_URL')  # Optional: remote URL to download model weights
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff'}
+    FRONTEND_ORIGIN = os.getenv('FRONTEND_ORIGIN')  # Optional: explicit frontend origin for CORS
 
 app.config.from_object(Config)
 
@@ -75,8 +102,13 @@ def handle_preflight():
     """Handle preflight OPTIONS requests"""
     if request.method == 'OPTIONS':
         origin = request.headers.get('Origin', '')
-        # Allow any localhost origin for development
-        if origin.startswith('http://localhost:') or origin.startswith('http://127.0.0.1:'):
+        # Allow any localhost origin for development, plus configured frontend origin in production
+        allowed_origin = app.config.get('FRONTEND_ORIGIN')
+        if (
+            origin.startswith('http://localhost:')
+            or origin.startswith('http://127.0.0.1:')
+            or (allowed_origin and origin == allowed_origin)
+        ):
             response = jsonify({})
             # Use dictionary assignment to set (not add) headers
             response.headers['Access-Control-Allow-Origin'] = origin
@@ -96,7 +128,13 @@ def after_request(response):
     origin = request.headers.get('Origin', '')
     
     # Allow any localhost origin for development (flexible for Vite's dynamic ports)
-    if origin.startswith('http://localhost:') or origin.startswith('http://127.0.0.1:'):
+    # and the configured production frontend origin
+    allowed_origin = app.config.get('FRONTEND_ORIGIN')
+    if (
+        origin.startswith('http://localhost:')
+        or origin.startswith('http://127.0.0.1:')
+        or (allowed_origin and origin == allowed_origin)
+    ):
         # Use dictionary assignment to set (not add) headers, preventing duplicates
         response.headers['Access-Control-Allow-Origin'] = origin
         response.headers['Access-Control-Allow-Credentials'] = 'true'
