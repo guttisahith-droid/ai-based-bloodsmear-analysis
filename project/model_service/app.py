@@ -186,7 +186,7 @@ class BloodSmearClassifier:
         
         try:
             # Load checkpoint
-            checkpoint = torch.load(model_path, map_location=self.device)
+            checkpoint = torch.load(model_path, map_location=self.device, weights_only=False)
             print(f"🔍 Checkpoint keys: {list(checkpoint.keys())}")
             
             # Fixed: Your model has 11 classes based on the error message
