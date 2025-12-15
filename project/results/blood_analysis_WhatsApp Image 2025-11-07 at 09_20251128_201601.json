@@ -1,0 +1,145 @@
+{
+  "COMPLETE BLOOD ANALYSIS REPORT": {
+    "Timestamp": "2025-11-28 20:16:01",
+    "Image Analyzed": "WhatsApp Image 2025-11-07 at 09.15.25 (2).jpeg",
+    "Processing Time": "4.78 seconds",
+    "Validation Confidence": "0.729",
+    "Analysis Mode": "Real-Time Complete"
+  },
+  "DISEASE DIAGNOSIS": {
+    "predicted_disease": "Model not trained",
+    "confidence": 0.0,
+    "top_predictions": {}
+  },
+  "CELL COUNT ANALYSIS": {
+    "cell_counts": {
+      "RBC": 451,
+      "WBC": 53,
+      "Platelet": 26
+    },
+    "total_cells": 531,
+    "rbc_wbc_ratio": 8.50943396226415,
+    "note": "Estimated using computer vision"
+  },
+  "WHITE BLOOD CELL DIFFERENTIAL": {
+    "Total WBCs Analyzed": "146 cells",
+    "Detailed Analysis": [
+      {
+        "Cell Type": "Neutrophil",
+        "Count": "81 cells",
+        "Percentage": "55.5%"
+      },
+      {
+        "Cell Type": "Lymphocyte",
+        "Count": "52 cells",
+        "Percentage": "35.6%"
+      },
+      {
+        "Cell Type": "Monocyte",
+        "Count": "8 cells",
+        "Percentage": "5.5%"
+      },
+      {
+        "Cell Type": "Eosinophil",
+        "Count": "4 cells",
+        "Percentage": "2.7%"
+      },
+      {
+        "Cell Type": "Basophil",
+        "Count": "1 cells",
+        "Percentage": "0.7%"
+      }
+    ]
+  },
+  "ENHANCED COLOR ANALYSIS": {
+    "color_statistics": {
+      "red_mean": 122.5229443359375,
+      "red_std": 12.32056707183199,
+      "green_mean": 87.78153991699219,
+      "green_std": 15.57968223750068,
+      "blue_mean": 94.583984375,
+      "blue_std": 14.881360078201844,
+      "hue_mean": 100.48300699869792,
+      "hue_std": 81.36717837438512,
+      "saturation_mean": 78.45109537760416,
+      "saturation_std": 18.875842263682674,
+      "value_mean": 122.77940409342447,
+      "value_std": 12.143250155359997,
+      "colorfulness": 39.311745202731984,
+      "contrast": 13.942128463659584
+    },
+    "dominant_colors": [
+      {
+        "rgb": [
+          120,
+          86,
+          88
+        ],
+        "percentage": 27.44,
+        "color_name": "mixed"
+      },
+      {
+        "rgb": [
+          110,
+          77,
+          78
+        ],
+        "percentage": 27.04,
+        "color_name": "mixed"
+      },
+      {
+        "rgb": [
+          130,
+          96,
+          103
+        ],
+        "percentage": 22.49,
+        "color_name": "mixed"
+      },
+      {
+        "rgb": [
+          143,
+          113,
+          111
+        ],
+        "percentage": 13.9,
+        "color_name": "mixed"
+      },
+      {
+        "rgb": [
+          113,
+          61,
+          112
+        ],
+        "percentage": 9.14,
+        "color_name": "mixed"
+      }
+    ],
+    "disease_indicators": [
+      "Normal color distribution"
+    ],
+    "staining_quality": "Poor staining quality - may affect diagnosis",
+    "cell_color_features": {
+      "rbc_color_coverage": 82.22,
+      "wbc_color_coverage": 90.99,
+      "staining_contrast": 18.88
+    }
+  },
+  "CLINICAL NOTES": [
+    "\ud83d\udd34 Low red blood cell count (possible anemia)",
+    "Normal color distribution"
+  ],
+  "SYSTEM STATISTICS": {
+    "Total Images Processed": 1,
+    "Rejected Images": 0,
+    "Cumulative RBC Count": "0",
+    "Cumulative WBC Count": "0",
+    "WBC Type Distribution": {
+      "Neutrophil": 81,
+      "Lymphocyte": 52,
+      "Monocyte": 8,
+      "Eosinophil": 4,
+      "Basophil": 1
+    }
+  }
+}

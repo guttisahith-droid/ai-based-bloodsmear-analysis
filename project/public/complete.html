@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blood Smear AI Analysis Platform</title>
+    <link rel="stylesheet" href="complete-styles.css">
+</head>
+<body>
+    <!-- Auth Container -->
+    <div id="auth-container" class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="logo-large">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 21v-4m0 0V5a2 2 0 0 1 2-2h6.5L14 6h5a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-5l-2.5 3H5a2 2 0 0 1-2-2Z"/>
+                    </svg>
+                </div>
+                <h1>Blood Smear AI Analysis</h1>
+                <p>Advanced microscopy analysis powered by AI</p>
+            </div>
+
+            <div class="auth-tabs">
+                <button id="login-tab" class="tab-btn active" onclick="switchAuthTab('login')">Sign In</button>
+                <button id="signup-tab" class="tab-btn" onclick="switchAuthTab('signup')">Sign Up</button>
+            </div>
+
+            <div id="auth-error" class="alert alert-error" style="display: none;"></div>
+            <div id="auth-success" class="alert alert-success" style="display: none;"></div>
+
+            <form id="auth-form" onsubmit="handleAuth(event)">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" required placeholder="you@example.com">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required placeholder="••••••••" minlength="6">
+                </div>
+
+                <button type="submit" id="auth-submit" class="btn btn-primary btn-block">
+                    <span id="auth-btn-text">Sign In</span>
+                    <span id="auth-spinner" class="spinner" style="display: none;"></span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- App Container -->
+    <div id="app-container" class="app-container" style="display: none;">
+        <!-- Top Navigation -->
+        <nav class="top-nav">
+            <div class="nav-brand">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 21v-4m0 0V5a2 2 0 0 1 2-2h6.5L14 6h5a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-5l-2.5 3H5a2 2 0 0 1-2-2Z"/>
+                </svg>
+                <span>Blood Smear AI</span>
+            </div>
+
+            <div class="nav-actions">
+                <button class="icon-btn" onclick="toggleNotifications()" title="Notifications">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                    </svg>
+                    <span id="notif-badge" class="badge" style="display: none;">0</span>
+                </button>
+
+                <div class="user-menu">
+                    <button class="user-btn" onclick="toggleUserMenu()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        <span id="user-email"></span>
+                    </button>
+                    <div id="user-dropdown" class="dropdown-menu" style="display: none;">
+                        <a href="#" onclick="showPage('profile')">Profile Settings</a>
+                        <a href="#" onclick="showPage('usage')">Usage Analytics</a>
+                        <a href="#" onclick="handleSignOut()">Sign Out</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Notification Panel -->
+        <div id="notification-panel" class="notification-panel" style="display: none;">
+            <div class="panel-header">
+                <h3>Notifications</h3>
+                <button class="btn btn-sm" onclick="markAllRead()">Mark all read</button>
+            </div>
+            <div id="notifications-list" class="notifications-list">
+                <div class="empty-state">No notifications</div>
+            </div>
+        </div>
+
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="nav-section">
+                <a href="#" class="nav-link active" data-page="dashboard" onclick="showPage('dashboard')">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+                    </svg>
+                    <span>Dashboard</span>
+                </a>
+
+                <a href="#" class="nav-link" data-page="new-analysis" onclick="showPage('new-analysis')">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+                    </svg>
+                    <span>New Analysis</span>
+                </a>
+
+                <a href="#" class="nav-link" data-page="live-microscopy" onclick="showPage('live-microscopy')">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                    </svg>
+                    <span>Live Microscopy</span>
+                </a>
+
+                <a href="#" class="nav-link" data-page="history" onclick="showPage('history')">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/>
+                    </svg>
+                    <span>History</span>
+                </a>
+
+                <a href="#" class="nav-link" data-page="reports" onclick="showPage('reports')">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                    </svg>
+                    <span>Reports</span>
+                </a>
+            </div>
+
+            <div class="system-status">
+                <h4>System Status</h4>
+                <div class="status-item">
+                    <span>Model Status</span>
+                    <span class="status-badge status-online">Online</span>
+                </div>
+                <div class="status-item">
+                    <span>GPU Utilization</span>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 45%"></div>
+                    </div>
+                    <span class="status-value">45%</span>
+                </div>
+                <div class="status-item">
+                    <span>Storage</span>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 62%"></div>
+                    </div>
+                    <span class="status-value">62%</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Page -->
+            <div id="dashboard-page" class="page active">
+                <div class="page-header">
+                    <div>
+                        <h1>Dashboard</h1>
+                        <p>Welcome back! Here's your analysis overview</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="showPage('new-analysis')">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+                        </svg>
+                        New Analysis
+                    </button>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card gradient-blue">
+                        <div class="stat-header">
+                            <span class="stat-label">Total Analyses</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                            </svg>
+                        </div>
+                        <div class="stat-value" id="total-count">0</div>
+                        <div class="stat-trend positive">
+                            <span>↑ 12%</span>
+                            <span>vs last month</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card gradient-green">
+                        <div class="stat-header">
+                            <span class="stat-label">Accuracy Rate</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                        </div>
+                        <div class="stat-value">97.5%</div>
+                        <div class="stat-trend">
+                            <span class="accuracy-badge">High Confidence</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card gradient-orange">
+                        <div class="stat-header">
+                            <span class="stat-label">Positive Detections</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                            </svg>
+                        </div>
+                        <div class="stat-value" id="positive-rate">0%</div>
+                        <div class="stat-trend">
+                            <span id="positive-count">0</span>
+                            <span>abnormal findings</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card gradient-purple">
+                        <div class="stat-header">
+                            <span class="stat-label">This Month</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                            </svg>
+                        </div>
+                        <div class="stat-value" id="month-count">0</div>
+                        <div class="stat-trend positive">
+                            <span>↑ 8</span>
+                            <span>new analyses</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <div class="card-header">
+                            <h3>Monthly Performance</h3>
+                            <select id="chart-period" class="select-sm" onchange="updateMonthlyChart()">
+                                <option value="6">Last 6 Months</option>
+                                <option value="12">Last 12 Months</option>
+                            </select>
+                        </div>
+                        <canvas id="monthly-chart" class="chart-canvas"></canvas>
+                    </div>
+
+                    <div class="chart-card">
+                        <div class="card-header">
+                            <h3>Disease Distribution</h3>
+                        </div>
+                        <canvas id="disease-chart" class="chart-canvas"></canvas>
+                        <div id="disease-legend" class="chart-legend"></div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="activity-section">
+                    <div class="section-header">
+                        <h3>Recent Activity</h3>
+                        <a href="#" onclick="showPage('history')" class="link">View All →</a>
+                    </div>
+                    <div id="recent-activity" class="activity-list">
+                        <div class="empty-state">No recent activity</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- New Analysis Page -->
+            <div id="new-analysis-page" class="page">
+                <div class="page-header">
+                    <div>
+                        <h1>New Analysis</h1>
+                        <p>Upload blood smear images for AI-powered analysis</p>
+                    </div>
+                </div>
+
+                <div class="upload-section">
+                    <form id="upload-form" onsubmit="handleUpload(event)">
+                        <div class="upload-card">
+                            <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+                                <input type="file" id="file-input" accept="image/*" multiple style="display: none;" onchange="handleFileSelect(event)">
+                                <div id="upload-content">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                                    </svg>
+                                    <h3>Drop images here or click to upload</h3>
+                                    <p>Supports: JPG, PNG, JPEG (Max 10MB per file)</p>
+                                    <p class="batch-info">Batch upload supported</p>
+                                </div>
+                            </div>
+
+                            <div id="preview-section" style="display: none;">
+                                <h4>Selected Images</h4>
+                                <div id="image-previews" class="preview-grid"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="analysis-notes">Analysis Notes (Optional)</label>
+                                <textarea id="analysis-notes" rows="3" placeholder="Add any relevant clinical notes..."></textarea>
+                            </div>
+
+                            <button type="submit" id="upload-btn" class="btn btn-primary btn-lg btn-block">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                                </svg>
+                                <span id="upload-btn-text">Start Analysis</span>
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Processing Display -->
+                    <div id="processing-display" style="display: none;">
+                        <div class="processing-card">
+                            <div class="processing-header">
+                                <h3>Processing Analysis</h3>
+                                <span class="processing-status" id="processing-status">Initializing...</span>
+                            </div>
+
+                            <div class="progress-container">
+                                <div class="progress-bar-large">
+                                    <div id="progress-fill" class="progress-fill-animated"></div>
+                                </div>
+                                <div class="progress-info">
+                                    <span id="progress-percent">0%</span>
+                                    <span id="progress-eta">Estimating time...</span>
+                                </div>
+                            </div>
+
+                            <div class="processing-steps">
+                                <div class="step" id="step-upload">
+                                    <div class="step-icon">1</div>
+                                    <span>Uploading image</span>
+                                    <div class="step-status"></div>
+                                </div>
+                                <div class="step" id="step-preprocess">
+                                    <div class="step-icon">2</div>
+                                    <span>Preprocessing</span>
+                                    <div class="step-status"></div>
+                                </div>
+                                <div class="step" id="step-ai">
+                                    <div class="step-icon">3</div>
+                                    <span>AI Analysis</span>
+                                    <div class="step-status"></div>
+                                </div>
+                                <div class="step" id="step-cells">
+                                    <div class="step-icon">4</div>
+                                    <span>Cell Counting</span>
+                                    <div class="step-status"></div>
+                                </div>
+                                <div class="step" id="step-report">
+                                    <div class="step-icon">5</div>
+                                    <span>Generating Report</span>
+                                    <div class="step-status"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Results Display -->
+                    <div id="results-display" style="display: none;">
+                        <div class="results-card">
+                            <div class="results-header">
+                                <h3>Analysis Complete</h3>
+                                <button class="btn btn-secondary" onclick="resetUpload()">Analyze Another</button>
+                            </div>
+
+                            <div class="results-grid">
+                                <div class="result-card primary-diagnosis">
+                                    <h4>Primary Diagnosis</h4>
+                                    <div class="diagnosis-content">
+                                        <div class="circular-progress" id="confidence-circle">
+                                            <svg viewBox="0 0 100 100">
+                                                <circle cx="50" cy="50" r="45" class="progress-bg"/>
+                                                <circle cx="50" cy="50" r="45" class="progress-bar" id="confidence-bar"/>
+                                            </svg>
+                                            <div class="progress-text">
+                                                <span id="confidence-value">0%</span>
+                                            </div>
+                                        </div>
+                                        <h3 id="disease-name">-</h3>
+                                        <span id="validation-badge" class="validation-badge">VALIDATED</span>
+                                    </div>
+                                </div>
+
+                                <div class="result-card cell-counts">
+                                    <h4>Cell Count Analysis</h4>
+                                    <div class="cell-count-item">
+                                        <div class="count-header">
+                                            <span>RBC Count</span>
+                                            <span id="rbc-indicator" class="indicator"></span>
+                                        </div>
+                                        <div class="count-value" id="rbc-value">-</div>
+                                        <div class="count-range">Normal: 4500000-6000000</div>
+                                        <div class="meter">
+                                            <div class="meter-fill" id="rbc-meter"></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="cell-count-item">
+                                        <div class="count-header">
+                                            <span>WBC Count</span>
+                                            <span id="wbc-indicator" class="indicator"></span>
+                                        </div>
+                                        <div class="count-value" id="wbc-value">-</div>
+                                        <div class="count-range">Normal: 4000-11000</div>
+                                        <div class="meter">
+                                            <div class="meter-fill" id="wbc-meter"></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="cell-count-item">
+                                        <div class="count-header">
+                                            <span>Platelet Count</span>
+                                            <span id="platelet-indicator" class="indicator"></span>
+                                        </div>
+                                        <div class="count-value" id="platelet-value">-</div>
+                                        <div class="count-range">Normal: 150000-450000</div>
+                                        <div class="meter">
+                                            <div class="meter-fill" id="platelet-meter"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button class="btn btn-primary btn-block" onclick="generatePDFReport()">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                                </svg>
+                                Download PDF Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Microscopy Page -->
+            <div id="live-microscopy-page" class="page">
+                <div class="page-header">
+                    <div>
+                        <h1>Live Microscopy</h1>
+                        <p>Real-time blood smear analysis from webcam/microscope</p>
+                    </div>
+                </div>
+
+                <div class="microscopy-container">
+                    <div class="video-section">
+                        <div class="video-wrapper">
+                            <video id="video-feed" autoplay playsinline></video>
+                            <canvas id="overlay-canvas"></canvas>
+                            <div class="video-controls">
+                                <button id="start-video" class="btn btn-primary" onclick="startVideo()">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polygon points="5 3 19 12 5 21 5 3"/>
+                                    </svg>
+                                    Start Camera
+                                </button>
+                                <button id="stop-video" class="btn btn-secondary" onclick="stopVideo()" style="display: none;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="6" y="6" width="12" height="12"/>
+                                    </svg>
+                                    Stop
+                                </button>
+                                <button id="capture-frame" class="btn btn-success" onclick="captureFrame()" style="display: none;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+                                    </svg>
+                                    Capture
+                                </button>
+                                <button id="fullscreen-btn" class="btn btn-secondary" onclick="toggleFullscreen()" style="display: none;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="live-stats">
+                            <div class="live-stat">
+                                <span>Cells Detected</span>
+                                <strong id="live-cell-count">0</strong>
+                            </div>
+                            <div class="live-stat">
+                                <span>Detection Rate</span>
+                                <strong id="live-detection-rate">0/s</strong>
+                            </div>
+                            <div class="live-stat">
+                                <span>Confidence</span>
+                                <strong id="live-confidence">-</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="captures-section">
+                        <h3>Captured Frames</h3>
+                        <div id="captures-grid" class="captures-grid">
+                            <div class="empty-state">No captures yet</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Page -->
+            <div id="history-page" class="page">
+                <div class="page-header">
+                    <div>
+                        <h1>Analysis History</h1>
+                        <p>View and manage all your analyses</p>
+                    </div>
+                    <button class="btn btn-secondary" onclick="exportHistory()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Export CSV
+                    </button>
+                </div>
+
+                <!-- Filters -->
+                <div class="filters-section">
+                    <div class="filter-group">
+                        <label>Date Range</label>
+                        <input type="date" id="filter-from" onchange="applyFilters()">
+                        <span>to</span>
+                        <input type="date" id="filter-to" onchange="applyFilters()">
+                    </div>
+
+                    <div class="filter-group">
+                        <label>Disease Type</label>
+                        <select id="filter-disease" onchange="applyFilters()" multiple>
+                            <option value="">All Diseases</option>
+                            <option value="Normal">Normal</option>
+                            <option value="Malaria">Malaria</option>
+                            <option value="Leukemia">Leukemia</option>
+                            <option value="Anemia">Anemia</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>Confidence</label>
+                        <input type="range" id="filter-confidence" min="0" max="100" value="0" oninput="updateConfidenceLabel(); applyFilters()">
+                        <span id="confidence-label">0%+</span>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>Search</label>
+                        <input type="text" id="filter-search" placeholder="Search by ID or notes" oninput="applyFilters()">
+                    </div>
+
+                    <button class="btn btn-secondary" onclick="clearFilters()">Clear Filters</button>
+                </div>
+
+                <!-- Bulk Actions -->
+                <div id="bulk-actions" class="bulk-actions" style="display: none;">
+                    <span id="selected-count">0 selected</span>
+                    <button class="btn btn-sm" onclick="bulkExport()">Export PDF</button>
+                    <button class="btn btn-sm btn-danger" onclick="bulkDelete()">Delete</button>
+                </div>
+
+                <!-- History Table -->
+                <div class="table-wrapper">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th><input type="checkbox" id="select-all" onchange="toggleSelectAll()"></th>
+                                <th>Image</th>
+                                <th onclick="sortHistory('date')">Date <span class="sort-icon">↕</span></th>
+                                <th onclick="sortHistory('disease')">Disease <span class="sort-icon">↕</span></th>
+                                <th onclick="sortHistory('confidence')">Confidence <span class="sort-icon">↕</span></th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-tbody">
+                            <tr>
+                                <td colspan="7" class="empty-state">No analysis history</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Reports Page -->
+            <div id="reports-page" class="page">
+                <div class="page-header">
+                    <div>
+                        <h1>Reports</h1>
+                        <p>Generate and download detailed analysis reports</p>
+                    </div>
+                </div>
+
+                <div class="reports-grid">
+                    <div class="report-card">
+                        <h3>Recent Reports</h3>
+                        <div id="recent-reports" class="reports-list">
+                            <div class="empty-state">No reports generated yet</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Page -->
+            <div id="profile-page" class="page">
+                <div class="page-header">
+                    <h1>Profile Settings</h1>
+                </div>
+                <div class="settings-card">
+                    <h3>Account Information</h3>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="profile-email" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Change Password</label>
+                        <input type="password" placeholder="New password">
+                    </div>
+                    <button class="btn btn-primary">Update Profile</button>
+                </div>
+            </div>
+
+            <!-- Usage Page -->
+            <div id="usage-page" class="page">
+                <div class="page-header">
+                    <h1>Usage Analytics</h1>
+                </div>
+                <div class="usage-stats">
+                    <canvas id="usage-chart"></canvas>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script src="complete-app.js"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+torch>=2.0.0
+torchvision>=0.15.0
+pillow>=10.0.0
+numpy>=1.24.0
+opencv-python>=4.8.0
+
+# For GPU support with CUDA 11.8:
+# pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu118
+
+# For GPU support with CUDA 12.1:
+# pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu121
