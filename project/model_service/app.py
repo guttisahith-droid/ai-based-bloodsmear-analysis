@@ -102,12 +102,17 @@ def handle_preflight():
     """Handle preflight OPTIONS requests"""
     if request.method == 'OPTIONS':
         origin = request.headers.get('Origin', '')
-        # Allow any localhost origin for development, plus configured frontend origin in production
+        # Allow any localhost origin for development, plus configured frontend origin in production.
+        # Also allow any Render-hosted frontend (*.onrender.com) to simplify deployment.
         allowed_origin = app.config.get('FRONTEND_ORIGIN')
         if (
-            origin.startswith('http://localhost:')
-            or origin.startswith('http://127.0.0.1:')
-            or (allowed_origin and origin == allowed_origin)
+            origin
+            and (
+                origin.startswith('http://localhost:')
+                or origin.startswith('http://127.0.0.1:')
+                or (allowed_origin and origin == allowed_origin)
+                or origin.endswith('.onrender.com')
+            )
         ):
             response = jsonify({})
             # Use dictionary assignment to set (not add) headers
@@ -128,12 +133,17 @@ def after_request(response):
     origin = request.headers.get('Origin', '')
     
     # Allow any localhost origin for development (flexible for Vite's dynamic ports)
-    # and the configured production frontend origin
+    # and the configured production frontend origin.
+    # Also allow any Render frontend (*.onrender.com) to simplify deployment.
     allowed_origin = app.config.get('FRONTEND_ORIGIN')
     if (
-        origin.startswith('http://localhost:')
-        or origin.startswith('http://127.0.0.1:')
-        or (allowed_origin and origin == allowed_origin)
+        origin
+        and (
+            origin.startswith('http://localhost:')
+            or origin.startswith('http://127.0.0.1:')
+            or (allowed_origin and origin == allowed_origin)
+            or origin.endswith('.onrender.com')
+        )
     ):
         # Use dictionary assignment to set (not add) headers, preventing duplicates
         response.headers['Access-Control-Allow-Origin'] = origin
