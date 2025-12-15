@@ -20,10 +20,10 @@ const app = express();
 
 connectDB();
 
+const allowedOrigin = process.env.FRONTEND_ORIGIN || 'http://localhost:5173';
+
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? 'https://your-frontend-domain.com'
-    : 'http://localhost:5173',
+  origin: allowedOrigin === '*' ? true : allowedOrigin,
   credentials: true
 }));
 

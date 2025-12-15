@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5001'; // Remove /api from base URL to prevent duplication
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -75,7 +75,7 @@ api.interceptors.response.use(
       if (error.response !== undefined || !error.config) {
         console.error(
           `❌ Network Error: Cannot connect to backend server at ${error.config?.baseURL}\n` +
-          `   Please ensure the Flask backend is running on port 5001`
+        `   Please ensure the backend is running on ${error.config?.baseURL || 'http://localhost:5000'}`
         );
       }
     }
