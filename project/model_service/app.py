@@ -846,6 +846,34 @@ def get_current_user(current_user):
 def analyze_image(current_user):
     return model_classification_core(current_user)
 
+
+@app.route('/api/analyze', methods=['OPTIONS'])
+def analyze_image_options():
+    """
+    Explicit CORS preflight handler for /api/analyze.
+    Some deployments were still returning 404 for OPTIONS, so we
+    provide a concrete route in addition to the global before_request hook.
+    """
+    origin = request.headers.get('Origin', '')
+    allowed_origin = app.config.get('FRONTEND_ORIGIN')
+
+    resp = jsonify({})
+
+    if origin and (
+        origin.startswith('http://localhost:')
+        or origin.startswith('http://127.0.0.1:')
+        or origin.endswith('.onrender.com')
+        or (allowed_origin and origin == allowed_origin)
+    ):
+        resp.headers['Access-Control-Allow-Origin'] = origin
+        resp.headers['Access-Control-Allow-Credentials'] = 'true'
+
+    resp.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
+    resp.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, PATCH'
+    resp.headers['Access-Control-Max-Age'] = '3600'
+
+    return resp, 200
+
 def model_classification_core(current_user):
     try:
         upload_key = 'file' if 'file' in request.files else ('image' if 'image' in request.files else None)
