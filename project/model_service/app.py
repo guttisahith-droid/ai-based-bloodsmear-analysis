@@ -17,6 +17,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
 from functools import wraps
 import gridfs
+import urllib.request
 
 app = Flask(__name__)
 
@@ -29,6 +30,7 @@ class Config:
     UPLOAD_FOLDER = 'uploads'
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
     MODEL_PATH = os.getenv('MODEL_PATH', 'best_model.pth')
+    MODEL_URL = os.getenv('MODEL_URL')  # Optional: remote URL to download model weights
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff'}
 
 app.config.from_object(Config)
@@ -158,11 +160,19 @@ class BloodSmearClassifier:
     def load_model(self, model_path):
         """Load the trained model - Fixed for 11 classes"""
         print(f"📁 Loading model from: {model_path}")
-        
+
         if not os.path.exists(model_path):
-            print(f"❌ Model file not found: {model_path}")
-            print("🔄 Creating a new model with random weights...")
-            return self.create_new_model()
+            if app.config.get('MODEL_URL'):
+                try:
+                    print(f"🌐 Downloading model from {app.config['MODEL_URL']} ...")
+                    urllib.request.urlretrieve(app.config['MODEL_URL'], model_path)
+                    print("✅ Downloaded model file")
+                except Exception as e:
+                    print(f"❌ Failed to download model: {e}")
+            if not os.path.exists(model_path):
+                print(f"❌ Model file not found: {model_path}")
+                print("🔄 Creating a new model with random weights...")
+                return self.create_new_model()
         
         try:
             # Load checkpoint
