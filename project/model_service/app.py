@@ -63,19 +63,13 @@ class Config:
 
 app.config.from_object(Config)
 
-# Enable Flask-CORS globally for API routes. This simplifies and hardens CORS handling
-# compared to the custom before_request/after_request logic below.
-allowed_origins = [
-    os.getenv("FRONTEND_ORIGIN", "https://ai-based-bloodsmear-frontend.onrender.com"),
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
-
-# Allow any *.onrender.com origin as well, to support Render previews/renames.
+# Open CORS for all /api routes so frontend on any domain can call the API.
+# This is acceptable here because authentication is done via JWT in the
+# Authorization header, not via cookies, so we do not rely on credentials.
 CORS(
     app,
-    resources={r"/api/*": {"origins": allowed_origins + ["*.onrender.com"]}},
-    supports_credentials=True,
+    resources={r"/api/*": {"origins": "*"}},
+    supports_credentials=False,
 )
 
 class DummyCollection:
