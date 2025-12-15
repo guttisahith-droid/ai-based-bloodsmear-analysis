@@ -7,3 +7,4 @@ pillow
 pyjwt
 werkzeug
 python-dotenv
+uvicorn==0.30.0
