@@ -24,7 +24,7 @@ app = Flask(__name__)
 # Configuration
 class Config:
     # Use local MongoDB by default, can be overridden with MONGODB_URI environment variable
-    MONGODB_URI = os.getenv('MONGODB_URI', 'mongodb://localhost:27017/bloodsmear')
+    MONGODB_URI = os.getenv('MONGODB_URI', 'MONGODB_URI=mongodb+srv://guttisahith_db_user:Bhanu@143@cluster0.afzyuif.mongodb.net/bloodsmear?retryWrites=true&w=majority')
     PORT = int(os.getenv('PORT', 5001))
     SECRET_KEY = os.getenv('JWT_SECRET', 'your_super_secret_jwt_key_change_this')
     UPLOAD_FOLDER = 'uploads'
@@ -164,8 +164,18 @@ class BloodSmearClassifier:
         if not os.path.exists(model_path):
             if app.config.get('MODEL_URL'):
                 try:
-                    print(f"🌐 Downloading model from {app.config['MODEL_URL']} ...")
-                    urllib.request.urlretrieve(app.config['MODEL_URL'], model_path)
+                    # Convert Google Drive share links to direct download links if needed
+                    model_url = app.config['MODEL_URL']
+                    if "drive.google.com/file/d/" in model_url and "/view" in model_url:
+                        try:
+                            file_id = model_url.split('/d/')[1].split('/')[0]
+                            model_url = f"https://drive.google.com/uc?export=download&id={file_id}"
+                            print(f"🔗 Converted Google Drive link to direct download: {model_url}")
+                        except Exception as e:
+                            print(f"⚠️ Could not parse Google Drive link: {e}")
+
+                    print(f"🌐 Downloading model from {model_url} ...")
+                    urllib.request.urlretrieve(model_url, model_path)
                     print("✅ Downloaded model file")
                 except Exception as e:
                     print(f"❌ Failed to download model: {e}")
