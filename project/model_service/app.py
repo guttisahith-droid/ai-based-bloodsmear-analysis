@@ -22,33 +22,21 @@ import urllib.request
 
 app = Flask(__name__)
 
-
 def _normalize_mongo_uri(raw_uri: str | None) -> str | None:
     """
     Normalize MongoDB URI values.
-
-    Some environments mistakenly set MONGODB_URI like:
-        MONGODB_URI=MONGODB_URI=mongodb+srv://...
-    This helper strips the leading `MONGODB_URI=` if present so that
-    pymongo receives a valid URI starting with mongodb:// or mongodb+srv://
     """
     if not raw_uri:
         return raw_uri
     if raw_uri.startswith('MONGODB_URI='):
-        # Strip the accidental prefix and log a warning once
         cleaned = raw_uri.split('=', 1)[1].strip()
         print("⚠️  Detected malformed MONGODB_URI starting with 'MONGODB_URI='; "
               "automatically corrected to:", cleaned)
         return cleaned
     return raw_uri
 
-
 # Configuration
 class Config:
-    # Use local MongoDB by default, can be overridden with MONGODB_URI environment variable
-    # NOTE: The default here is only for local/dev. In Render or production you MUST set MONGODB_URI as an env var.
-    # Example (do NOT hard-code credentials here):
-    #   MONGODB_URI=mongodb+srv://bloodsmear:ENCODED_PASSWORD@cluster0.afzyuif.mongodb.net/bloodsmear?retryWrites=true&w=majority
     MONGODB_URI = _normalize_mongo_uri(
         os.getenv('MONGODB_URI', 'mongodb://localhost:27017/bloodsmear')
     )
@@ -57,21 +45,90 @@ class Config:
     UPLOAD_FOLDER = 'uploads'
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
     MODEL_PATH = os.getenv('MODEL_PATH', 'best_model.pth')
-    MODEL_URL = os.getenv('MODEL_URL')  # Optional: remote URL to download model weights
+    MODEL_URL = os.getenv('MODEL_URL')
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff'}
-    FRONTEND_ORIGIN = os.getenv('FRONTEND_ORIGIN')  # Optional: explicit frontend origin for CORS
+    FRONTEND_ORIGIN = os.getenv('FRONTEND_ORIGIN', 'https://ai-based-bloodsmear-frontend.onrender.com')
 
 app.config.from_object(Config)
 
-# Open CORS for all /api routes so frontend on any domain can call the API.
-# This is acceptable here because authentication is done via JWT in the
-# Authorization header, not via cookies, so we do not rely on credentials.
+# ✅ FIXED CORS CONFIGURATION
+# Proper CORS setup that supports credentials
 CORS(
     app,
-    resources={r"/api/*": {"origins": "*"}},
-    supports_credentials=False,
+    resources={
+        r"/api/*": {
+            "origins": [
+                "https://ai-based-bloodsmear-frontend.onrender.com",
+                "http://localhost:5173",
+                "http://localhost:3000",
+                "http://127.0.0.1:5173",
+                "http://127.0.0.1:3000"
+            ],
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+            "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
+            "supports_credentials": True,
+            "expose_headers": ["Content-Type", "Authorization"],
+            "max_age": 3600
+        }
+    }
 )
 
+# Add a before_request handler to set CORS headers properly
+@app.before_request
+def handle_options_request():
+    """Handle OPTIONS requests for CORS preflight"""
+    if request.method == 'OPTIONS':
+        origin = request.headers.get('Origin', '')
+        allowed_origins = [
+            "https://ai-based-bloodsmear-frontend.onrender.com",
+            "http://localhost:5173",
+            "http://localhost:3000",
+            "http://127.0.0.1:5173",
+            "http://127.0.0.1:3000"
+        ]
+        
+        response = app.make_default_options_response()
+        
+        if origin in allowed_origins:
+            response.headers['Access-Control-Allow-Origin'] = origin
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+        elif origin.startswith('http://localhost:') or origin.startswith('http://127.0.0.1:'):
+            response.headers['Access-Control-Allow-Origin'] = origin
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+        
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, PATCH'
+        response.headers['Access-Control-Max-Age'] = '3600'
+        
+        return response
+
+# Add after_request handler to set CORS headers on all responses
+@app.after_request
+def add_cors_headers(response):
+    """Add CORS headers to all responses"""
+    origin = request.headers.get('Origin', '')
+    allowed_origins = [
+        "https://ai-based-bloodsmear-frontend.onrender.com",
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000"
+    ]
+    
+    if origin in allowed_origins:
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+    elif origin.startswith('http://localhost:') or origin.startswith('http://127.0.0.1:'):
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+    
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
+    response.headers['Access-Control-Expose-Headers'] = 'Content-Type, Authorization'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, PATCH'
+    
+    return response
+
+# DummyCollection class for fallback database
 class DummyCollection:
     def find_one(self, *args, **kwargs):
         return None
@@ -101,7 +158,7 @@ def ensure_indexes(users_collection, analyses_collection):
     except Exception:
         pass
 
-# Safe defaults to avoid NameError before setup_database runs
+# Safe defaults
 users_collection = DummyCollection()
 analyses_collection = DummyCollection()
 fs = type('obj', (object,), {'put': lambda *a: 'dummy_id', 'get': lambda *a: io.BytesIO(b'dummy')})
@@ -120,7 +177,6 @@ def setup_database():
         users_collection.delete_many({'username': None})
         users_collection.delete_many({'username': {'$exists': False}})
         
-        # Use the new ensure_indexes function
         ensure_indexes(users_collection, analyses_collection)
         
         fs = gridfs.GridFS(db)
@@ -146,7 +202,7 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 client, db, users_collection, analyses_collection, fs = setup_database()
 
-# Load the trained model (keeping your existing model code)
+# ✅ MODEL CODE - PRESERVED EXACTLY AS BEFORE
 class BloodSmearClassifier:
     def __init__(self, model_path=None):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -159,15 +215,7 @@ class BloodSmearClassifier:
         self.transform = self.get_transform()
         
     def load_model(self, model_path):
-        """Load the trained model - Fixed for 11 classes.
-
-        NOTE:
-        - This function now ONLY loads a local file at `model_path`.
-        - Remote downloads (e.g. from Google Drive) are intentionally disabled because
-          they often return HTML pages instead of raw .pth data, which breaks torch.load.
-        - To use a trained model, place a valid PyTorch checkpoint at `model_path`
-          (default: best_model.pth in project/model_service) and redeploy.
-        """
+        """Load the trained model - Fixed for 11 classes."""
         print(f"📁 Loading model from: {model_path}")
 
         if not os.path.exists(model_path):
@@ -415,6 +463,40 @@ def serialize_analysis(doc):
         d['completed_at'] = d['completed_at'].isoformat()
     return d
 
+# Add explicit OPTIONS handlers for problematic routes
+@app.route('/api/login', methods=['OPTIONS'])
+@app.route('/api/register', methods=['OPTIONS'])
+@app.route('/api/me', methods=['OPTIONS'])
+@app.route('/api/analyze', methods=['OPTIONS'])
+@app.route('/api/analyses', methods=['OPTIONS'])
+@app.route('/api/analyses/<analysis_id>', methods=['OPTIONS'])
+@app.route('/api/analytics/<path:subpath>', methods=['OPTIONS'])
+def handle_all_options(subpath=None):
+    """Handle OPTIONS for all routes that need it"""
+    origin = request.headers.get('Origin', '')
+    allowed_origins = [
+        "https://ai-based-bloodsmear-frontend.onrender.com",
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000"
+    ]
+    
+    response = app.make_default_options_response()
+    
+    if origin in allowed_origins:
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+    elif origin.startswith('http://localhost:') or origin.startswith('http://127.0.0.1:'):
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+    
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, PATCH'
+    response.headers['Access-Control-Max-Age'] = '3600'
+    
+    return response
+
 # Routes
 @app.route('/api/register', methods=['POST'])
 def register():
@@ -534,14 +616,18 @@ def login():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# ... (keep all your other routes the same as before)
-
-@app.route('/api/debug-cors', methods=['GET', 'POST', 'OPTIONS'])
+@app.route('/api/debug-cors', methods=['GET'])
 def debug_cors():
+    """Debug endpoint to check CORS configuration"""
     return jsonify({
         'message': 'CORS is working!',
         'timestamp': datetime.utcnow().isoformat(),
-        'method': request.method
+        'method': request.method,
+        'origin': request.headers.get('Origin'),
+        'cors_headers': {
+            'Access-Control-Allow-Origin': request.headers.get('Origin'),
+            'Access-Control-Allow-Credentials': 'true'
+        }
     })
 
 @app.route('/api/analytics/dashboard-stats', methods=['GET'])
@@ -624,7 +710,6 @@ def get_dashboard_stats(current_user):
             'accuracyRate': accuracy_rate,
             'monthlyAnalyses': monthly_analyses,
             'diseaseDistribution': disease_distribution,
-            # Fields expected by EnhancedDashboard
             'thisMonthAnalyses': monthly_analyses,
             'averageConfidence': average_confidence,
             'positiveDetectionRate': positive_detection_rate
@@ -794,39 +879,6 @@ def get_current_user(current_user):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/analyze', methods=['POST'])
-@token_required
-def analyze_image(current_user):
-    return model_classification_core(current_user)
-
-
-@app.route('/api/analyze', methods=['OPTIONS'])
-def analyze_image_options():
-    """
-    Explicit CORS preflight handler for /api/analyze.
-    Some deployments were still returning 404 for OPTIONS, so we
-    provide a concrete route in addition to the global before_request hook.
-    """
-    origin = request.headers.get('Origin', '')
-    allowed_origin = app.config.get('FRONTEND_ORIGIN')
-
-    resp = jsonify({})
-
-    if origin and (
-        origin.startswith('http://localhost:')
-        or origin.startswith('http://127.0.0.1:')
-        or origin.endswith('.onrender.com')
-        or (allowed_origin and origin == allowed_origin)
-    ):
-        resp.headers['Access-Control-Allow-Origin'] = origin
-        resp.headers['Access-Control-Allow-Credentials'] = 'true'
-
-    resp.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
-    resp.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, PATCH'
-    resp.headers['Access-Control-Max-Age'] = '3600'
-
-    return resp, 200
-
 def model_classification_core(current_user):
     try:
         upload_key = 'file' if 'file' in request.files else ('image' if 'image' in request.files else None)
@@ -944,6 +996,11 @@ def model_classification_core(current_user):
         print(f"❌ Unexpected error in model_classification: {str(e)}")
         return jsonify({'error': 'An unexpected error occurred'}), 500
 
+@app.route('/api/analyze', methods=['POST'])
+@token_required
+def analyze_image(current_user):
+    return model_classification_core(current_user)
+
 @app.route('/api/mc', methods=['POST'])
 @token_required
 def model_classification(current_user):
@@ -1015,7 +1072,7 @@ def index():
         'message': 'Blood Smear Analysis API',
         'version': '1.0.0',
         'status': 'running',
-        'cors': 'manual_cors_only',
+        'cors': 'enabled_with_credentials',
         'model_classes': classifier.class_names if classifier else []
     })
 
@@ -1024,6 +1081,10 @@ if __name__ == '__main__':
     print(f"🚀 Starting Blood Smear Analysis API on port {port}")
     print(f"🔗 MongoDB: {app.config['MONGODB_URI']}")
     print(f"📁 Model path: {app.config['MODEL_PATH']}")
-    print(f"🌐 MANUAL CORS enabled for: http://localhost:5173")
-    print("✅ No Flask-CORS - using manual CORS only")
+    print(f"📊 Model classes: {classifier.class_names if classifier else 'Not loaded'}")
+    print(f"🌐 CORS enabled for:")
+    print(f"   - https://ai-based-bloodsmear-frontend.onrender.com")
+    print(f"   - http://localhost:5173")
+    print(f"   - http://localhost:3000")
+    print(f"✅ Flask-CORS configured with credentials support")
     app.run(host='0.0.0.0', port=port, debug=False)
